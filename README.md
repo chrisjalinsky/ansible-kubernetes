@@ -61,7 +61,7 @@ ansible-playbook provision_docker_servers.yaml -i inventory.py
 
 Deploy Docker registry:
 -----------------------
-This starts an upstart script which calls ```./docker-compose up``` in the ```/docker-registry``` folder
+NOTE: Trusty 64 - This starts an upstart script which calls ```./docker-compose up``` in the ```/docker-registry``` folder
 ```
 ansible-playbook provision_docker_registry_servers.yaml -i inventory.py
 ```
@@ -74,33 +74,46 @@ ansible-playbook delegate_copy_ssl_cert.yaml -i inventory.py -vv
 
 Build Kubernetes cluster for ubuntu:
 ----------------------------
+NOTE: While reading the github issues, apparently this install method uses Trusty64 upstart services not compatible with Xenial64. See the manual Docker based install method for Xenial64
 ```
 ansible-playbook provision_kubernetes.yml -i inventory.py
 ```
 
-Docker build app to test deployment:
+Docker build Node.js test app deployment:
 ------------------------
+This creates a customizable dynamic Dockerfile build folder structure based on Ansible templates. The build folder is located at ```/tmp/hello-node```.
+TODO: Create an Ingress Controller for Kubernetes.
 ```
 ansible-playbook docker_build_app.yml -i inventory.py
 ```
 
-Then go to kmas1.lan:/tmp/docker_app/:
----------------------------
-```
-docker build -t kmas1.lan/hello-node:v1 .
-```
-
 Install Monitoring and Heapster:
 -----------------
+This playbook install the InfluxDB, Grafana, Heapster docker image into the kubernetes cluster.
 ```
-git clone https://github.com/kubernetes/heapster.git
+ansible-playbook provision_kubernetes_heapster.yml -i inventory.py
 ```
 
-The above steps are handled in the run_playbooks.sh script.
+Infrastructure Details
+=======================
 
----
+Docker Private Registry Build and Registry Login
+---------------------
+The Private Registry by default is installed on the kubernetes master (kmas1.lan). It's a docker-compose build behind an upstart script ```/etc/init.d/docker-registry```. There is an nginx proxy in front of the docker registry v2 image.
 
-After the build, test it out by running natively in docker and exposing port 8090:
+Htpasswd
+--------
+
+There are 2 test users defined, so sign in with the credentials defined in vars/makevault.yml. This should be converted to an ansible-vault, but for testing purposes, it's left open.
+
+After logging into new Docker private registry (testuser:pass) on the kubernetes master server, ```cd /tmp/docker_app/``` into the directory and build the Node.js app using the Dockerfile. Finally test by pushing the new docker image to the registry for kubernetes cluster usage and rolling upgrades.
+```
+docker login https://kmas1.lan
+docker build -t kmas1.lan/hello-node:v1 .
+docker push kmas1.lan/hello-node:v1
+```
+
+You can also test it out by running natively in docker and exposing the docker host port 8090:
 ```
 docker run -d -p 8090:8080 kmas1.lan/hello-node:v1
 ```
@@ -110,21 +123,19 @@ Kill the container:
 docker kill kmas1.lan/hello-node:v1 
 ```
 
-Push to the new docker registry so that we can use it in Kubernetes:
-```
-docker push kmas1.lan/hello-node:v1
-```
-
-Building Kubernetes pods and exposing them. Using the secure nginx example (Cant create the secrets yet):
+Building and exposing Kubernetes pods
+-----------------------
 
 Install go via this link:
 ```
 http://www.hostingadvice.com/how-to/install-golang-on-ubuntu/
 
 ```
-To create a django
-kubectl create -f ./django-redis-pod.yaml
-vi django-redis-pod.yaml
+Create a django redis pod
+--------------------------
+
+
+Create the file ```django-redis-pod.yaml```
 ```
 ---
 
@@ -146,47 +157,22 @@ spec:
         - containerPort: 8000
 ```
 
-Navigate to examples https example:
+Then create the replication controller:
+```
+kubectl create -f ./django-redis-pod.yaml
+```
+
+TODO: Build the https-nginx example
 ```
 cd /opt/kubernetes/examples/https-nginx/
 
 ```
 
-Using the Docker Registry
-==================
+Ubuntu Xenial 64
+========
 
-Here's a simple use case:
-
-```
-sudo docker login https://kmas1.lan
-```
-
-There are 2 test users defined, so sign in with the credentials defined in vars/makevault.yml. This should be converted to an ansible-vault, but for testing purposes, it's left open.
-
-At the login prompt:
-
-```
-username: testuser
-password: pass
-email: me@example.com
-```
-
-Once logged in, use the registry (if correctly configured, root user can run docker commands below, so no sudo is necessary):
-
-```
-docker pull ubuntu
-
-docker tag ubuntu kmas1.lan/ubuntu
-
-docker push kmas1.lan/ubuntu
-
-docker pull kmas1.lan/ubuntu
-
-```
-
-
-Docker Registry Systemd Xenial 64 (not applicable to trusty64):
-===============================================================
+Manual Docker based Ubuntu Xenial64 Installation:
+---------------------
 
 Service files when using xenial64 docker:
 --------------
@@ -194,32 +180,6 @@ Service files when using xenial64 docker:
 cat /etc/systemd/system/docker.service
 cat /etc/systemd/system/docker.socket
 ```
-
-Restart docker via systemd
---------------------------
-```
-sudo systemctl restart docker
-```
-
-Start Registry
---------------
-```
-cd /docker-registry
-docker-compose up
-```
-
-Then login on each kubernetes machine to create the /root/.docker/config.json auth hash:
-```
-docker login https://kmas1.lan
-```
-
-##################################################
-
-Ubuntu Xenial 64
-========
-
-Manual Docker based Ubuntu Xenial64 Installation:
----------------------
 
 NOTE: The Ansible role should handle the registry build correctly.
 The following steps have been adapted from Ubuntu Trusty 64. These SHOULD work for Xenial64:/
@@ -242,20 +202,6 @@ sudo systemctl restart docker
 Then followed this kubernetes guide for Docker based kubernetes:
 [http://kubernetes.io/docs/getting-started-guides/docker/](http://kubernetes.io/docs/getting-started-guides/docker/)
 
-
-Login to the registry:
-----------------------
-When I originally had created the kubernetes user, instead of modifying root
-```
-sudo chown kubernetes:kubernetes /home/kubernetes/.docker/config.json # This is a warning, doesn't seem to affect anything
-```
-Running commands as root user:
-```
-docker login https://kmas1.lan
-docker pull ubuntu
-docker tag ubuntu kmas1.lan/ubuntu
-docker push kmas1.lan/ubuntu
-```
 
 Manually Install Kubernetes on Trusty 64:
 ===================
