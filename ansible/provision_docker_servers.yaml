@@ -1,0 +1,17 @@
+---
+
+- name: Ensure docker engine present (and bridgeutils prereq for kubernetes)
+  hosts: kubernetes_servers
+  become: yes
+  become_user: root
+  pre_tasks:
+    - name: Install bridgeutils
+      apt:
+        name: bridge-utils
+        update_cache: yes
+        cache_valid_time: 3600
+  roles:
+    - role: docker_engine
+      docker_engine_repo: "ubuntu-trusty"
+      docker_opts:
+        - "--dns=192.168.0.10"

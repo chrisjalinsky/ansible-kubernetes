@@ -1,0 +1,28 @@
+---
+
+- name: Ensure docker engine and registry present on kube masters
+  hosts: kubernetes_master_servers
+  gather_facts: yes
+  become: yes
+  become_user: root
+  vars_files:
+    - vars/makevault.yml
+  pre_tasks:
+    - name: Ensure 127.0.1.1 loopback is not present in etc/hosts
+      lineinfile:
+        dest: "/etc/hosts"
+        line: "127.0.1.1"
+        regexp: "127.0.1.1"
+        state: absent
+    - name: Ensure hostname is {{ ansible_fqdn }}
+      hostname: name="{{ ansible_fqdn }}"
+  roles:
+    - role: openssl
+      openssl_generator_complexity: 4096
+    - role: docker_engine
+      docker_engine_repo: "ubuntu-trusty"
+      docker_opts:
+        - "--dns=192.168.0.10"
+    - role: docker_compose
+    - role: docker_registry
+      docker_registry_users: "{{ authorized_registry_users }}"

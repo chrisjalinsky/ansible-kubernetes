@@ -1,0 +1,8 @@
+---
+
+docker_build_app:
+  name: "hello-node"
+  dest: "/tmp/hello-node"
+  templates:
+    - src: server.js
+      dest: server.js

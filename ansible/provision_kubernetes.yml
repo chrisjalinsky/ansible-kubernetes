@@ -1,0 +1,12 @@
+---
+
+- name: Download Kubernetes Git repo and run installers
+  hosts: kubernetes_master_servers[0]
+  become: yes
+  become_user: root
+  roles:
+    - role: kubernetes
+      kubernetes_nodes_string: "root@192.168.0.11 root@192.168.0.20 root@192.168.0.21 root@192.168.0.22"
+      kubernetes_roles_string: "ai i i i"
+      kubernetes_num_nodes_string: "4"
+      kubernetes_docker_opts_string: "--insecure-registry=kmas1.lan:443"

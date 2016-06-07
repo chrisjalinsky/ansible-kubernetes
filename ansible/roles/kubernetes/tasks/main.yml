@@ -1,0 +1,72 @@
+---
+
+- name: Install prerequisite items - bridge-utils
+  apt:
+    name: "{{ item }}"
+    update_cache: yes
+    cache_valid_time: 3600
+  with_items:
+    - "bridge-utils"
+    - "git"
+
+- name: Create kubernetes dir
+  file:
+    dest: "/opt/kubernetes"
+    state: directory
+
+- name: Clone Kubernetes Git repo
+  git:
+    repo: "https://github.com/kubernetes/kubernetes.git"
+    dest: "/opt/kubernetes"
+    update: no
+
+#- name: Include vars when master
+#  when: kubernetes_role == "master"
+#  include: kubernetes_master.yml
+#
+#- name: Include vars when minion
+#  when: kubernetes_role == "minion"
+#  include: kubernetes_minion.yml
+
+- name: Template ubuntu config
+  template:
+    src: "config-default.sh.j2"
+    dest: "/opt/kubernetes/cluster/ubuntu/config-default.sh"
+    backup: yes
+    mode: "0775"
+
+- name: Run Kube up
+  shell: "KUBERNETES_PROVIDER=ubuntu ./kube-up.sh"
+  args:
+    executable: /bin/bash
+    chdir: "/opt/kubernetes/cluster"
+
+- name: Symlink kubectl
+  file:
+    src: "/opt/kubernetes/cluster/ubuntu/binaries/kubectl"
+    dest: "/usr/bin/kubectl"
+    state: "link"
+
+- name: Test kubernetes with kubectl
+  shell: "kubectl get nodes"
+  register: kubectl_get_nodes
+
+- name: Debug output of kubectl get nodes
+  debug:
+    var: kubectl_get_nodes.stdout_lines
+
+- name: Run deployAddons.sh
+  shell: "KUBERNETES_PROVIDER=ubuntu ./deployAddons.sh"
+  args:
+    executable: /bin/bash
+    chdir: "/opt/kubernetes/cluster/ubuntu"
+
+- name: Test kubernetes with kubectl cluster-info
+  shell: "kubectl cluster-info"
+  register: kubectl_cluster_info
+
+- name: Debug output of kubectl_cluster_info
+  debug:
+    var: kubectl_cluster_info.stdout_lines
+
+    

@@ -1,0 +1,8 @@
+---
+
+- name: Build Docker App 
+  hosts: kubernetes_master_servers[0]
+  become: yes
+  become_user: root
+  roles:
+    - role: docker_build_app

@@ -1,0 +1,17 @@
+---
+
+- name: Create docker build destination at {{ docker_build_app.dest }}
+  file:
+    dest: "{{ docker_build_app.dest }}"
+    state: directory
+
+- name: Create Dockerfile from template
+  template:
+    src: "Dockerfile"
+    dest: "{{ docker_build_app.dest }}/Dockerfile"
+
+- name: Add templates to build destination
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ docker_build_app.dest }}/{{ item.dest }}"
+  with_items: "{{ docker_build_app.templates }}"

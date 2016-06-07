@@ -1,0 +1,61 @@
+---
+
+- name: Set facts
+  hosts: all
+  become: yes
+  become_user: root
+  tasks:
+    - name: Set fact
+      set_fact:
+        fact_registry_leader: "{{ groups['kubernetes_master_servers'][0] }}"
+
+- name: Copy Docker Registry cert to kubernetes servers
+  hosts: kubernetes_master_servers[0]
+  become: yes
+  become_user: root
+  roles:
+    - role: delegate_copy
+      delegate_copy_from_host: "{{ inventory_hostname }}"
+      delegate_copy_become_user: "root"
+      delegate_copy_from_host_path: "/etc/ssl/{{ inventory_hostname }}/{{ inventory_hostname }}.crt"
+      delegate_copy_to_host: "{{ groups['kubernetes_servers'] | list }}"
+      delegate_copy_to_host_path: "/etc/docker/certs.d/{{ inventory_hostname }}/ca.crt"
+      delegate_copy_to_temp_path: "/tmp/ca.crt"
+      delegate_copy_to_ssh_user: "root"
+      delegate_copy_to_ssh_key_path: "/root/.ssh/id_rsa"
+      delegate_copy_create:
+        - dest: "/etc/docker/certs.d/{{ inventory_hostname }}"
+        - dest: "/usr/local/share/ca-certificates/{{ inventory_hostname }}"
+
+- name: Ensure docker registry cert added to kubernetes servers
+  hosts: kubernetes_servers
+  become: yes
+  become_user: root
+  tasks:
+    - name: Create dirs
+      file:
+        dest: "{{ item.dest }}"
+        state: "{{ item.state | default('directory') }}"
+        recurse: "{{ item.recurse | default('yes') }}"
+      with_items:
+        - dest: "/etc/docker/certs.d/{{ fact_registry_leader }}"
+        - dest: "/usr/local/share/ca-certificates/{{ fact_registry_leader }}"
+    - name: Copy certs
+      copy:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        remote_src: yes
+      with_items:
+        - src: "/tmp/ca.crt"
+          dest: "/etc/docker/certs.d/{{ fact_registry_leader }}/ca.crt"
+        - src: "/tmp/ca.crt"
+          dest: "/usr/local/share/ca-certificates/{{ fact_registry_leader }}/ca.crt"
+    - name: Update ca certs
+      shell: "update-ca-certificates"
+    - name: Restart docker
+      service:
+        name: docker
+        state: restarted
+
+
+      

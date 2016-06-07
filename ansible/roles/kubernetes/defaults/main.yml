@@ -1,0 +1,8 @@
+---
+
+# config-default.sh template vars
+kubernetes_nodes_string: ""
+kubernetes_roles_string: ""
+kubernetes_num_nodes: ""
+kubernetes_docker_opts_string: ""
+

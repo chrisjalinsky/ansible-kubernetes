@@ -1,0 +1,26 @@
+---
+
+- name: Ensure git installed
+  apt:
+    name: "{{ item }}"
+    update_cache: yes
+    cache_valid_time: 3600
+  with_items:
+    - "git"
+
+- name: Create heapster dir
+  file:
+    dest: "/opt/heapster"
+    state: directory
+
+- name: Clone Heapster Git repo
+  git:
+    repo: "https://github.com/kubernetes/heapster.git"
+    dest: "/opt/heapster"
+    update: no
+
+- name: Create with kubectl
+  shell: "kubectl create -f deploy/kube-config/influxdb/"
+  args:
+    executable: /bin/bash
+    chdir: "/opt/heapster"

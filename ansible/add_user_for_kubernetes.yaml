@@ -1,0 +1,15 @@
+---
+
+- name: Ensure user available for kubernetes
+  hosts: kubernetes_servers
+  become: yes
+  become_user: root
+  pre_tasks:
+    - name: Create docker group if not exists
+      group: name="docker"
+  roles:
+    - role: user_role
+      user_role_user: "root"
+      user_role_group: "root"
+      user_role_user_groups: "docker"
+      user_role_home: "/root"

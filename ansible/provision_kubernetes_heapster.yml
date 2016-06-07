@@ -1,0 +1,8 @@
+---
+
+- name: Download Kubernetes Git repo and run installers
+  hosts: kubernetes_master_servers[0]
+  become: yes
+  become_user: root
+  roles:
+    - role: kubernetes_heapster

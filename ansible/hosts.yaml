@@ -1,0 +1,33 @@
+---
+
+core_servers:
+  hosts: [ core1.lan ]
+  vars:
+    ansible_ssh_user: vagrant
+    ansible_ssh_private_key_file: "~/.vagrant.d/insecure_private_key"
+kubernetes_master_servers:
+  hosts: [ kmas1.lan ]
+  vars:
+    ansible_ssh_user: vagrant
+    ansible_ssh_private_key_file: "~/.vagrant.d/insecure_private_key"
+kubernetes_minion_servers:
+  hosts: [ kmin1.lan, kmin2.lan, kmin3.lan ]
+  vars:
+    ansible_ssh_user: vagrant
+    ansible_ssh_private_key_file: "~/.vagrant.d/insecure_private_key"
+kubernetes_servers:
+  children: [ kubernetes_master_servers, kubernetes_minion_servers ]
+all:
+  children: [ core_servers, kubernetes_master_servers, kubernetes_minion_servers ]
+_meta:
+  hostvars:
+    core1.lan:
+      vagrant_ip: "192.168.0.10"
+    kmas1.lan:
+      vagrant_ip: "192.168.0.11"
+    kmin1.lan:
+      vagrant_ip: "192.168.0.20"
+    kmin2.lan:
+      vagrant_ip: "192.168.0.21"
+    kmin3.lan:
+      vagrant_ip: "192.168.0.22"
