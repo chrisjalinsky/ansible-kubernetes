@@ -23,8 +23,10 @@ _meta:
   hostvars:
     core1.lan:
       vagrant_ip: "192.168.0.10"
+      vagrant_mem: "512"
     kmas1.lan:
       vagrant_ip: "192.168.0.11"
+      vagrant_mem: "4096"
     kmin1.lan:
       vagrant_ip: "192.168.0.20"
     kmin2.lan:

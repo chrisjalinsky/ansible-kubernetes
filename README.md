@@ -310,3 +310,21 @@ ssh root@kmin1.lan
 ssh root@kmin2.lan
 ssh root@kmin3.lan
 ```
+
+Viewing the kubernetes master host processes after Ubuntu cluster kube-up.sh:
+```
+root@kmas1:/home/vagrant# ps aux | grep kube
+
+/opt/bin/kube-scheduler --logtostderr=true --master=127.0.0.1:8080
+
+/opt/bin/kube-apiserver --insecure-bind-address=0.0.0.0 --insecure-port=8080 --etcd-servers=http://127.0.0.1:4001 --logtostderr=true --service-cluster-ip-range=192.168.3.0/24 --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,SecurityContextDeny,ResourceQuota --service-node-port-range=30000-32767 --advertise-address=192.168.0.11 --client-ca-file=/srv/kubernetes/ca.crt --tls-cert-file=/srv/kubernetes/server.cert --tls-private-key-file=/srv/kubernetes/server.key
+
+/opt/bin/kube-controller-manager --master=127.0.0.1:8080 --root-ca-file=/srv/kubernetes/ca.crt --service-account-private-key-file=/srv/kubernetes/server.key --logtostderr=true
+
+/opt/bin/kubelet --hostname-override=192.168.0.11 --api-servers=http://192.168.0.11:8080 --logtostderr=true --cluster-dns=192.168.3.10 --cluster-domain=cluster.local --config=
+
+/opt/bin/kube-proxy --hostname-override=192.168.0.11 --master=http://192.168.0.11:8080 --logtostderr=true
+
+root@kmas1:/opt/kubernetes/cluster/ubuntu/binaries/master# ls
+etcd  etcdctl  flanneld  kube-apiserver  kube-controller-manager  kube-scheduler
+```
