@@ -16,79 +16,92 @@ I use vagrant-hostsupdater plugin to write to my Macbook's /etc/hosts file for D
 vagrant up
 ```
 
+###The vagrant environment creates 5 hosts:
+
+* core1.lan (512 MB CPU) - Bind9 DNS
+* kmas1.lan (4 GB CPU) - Docker Engine, Docker Registry, Kubernetes Master (Etcd, Flannel, KubeScheduler, KubeAPIServer, Kubelet, KubeProxy, KubeControllerManager)
+* kmin1.lan (2 GB CPU) - Docker Engine, Kubernetes Minion
+* kmin2.lan (2 GB CPU) - Docker Engine, Kubernetes Minion
+* kmin3.lan (2 GB CPU) - Docker Engine, Kubernetes Minion
+
 Once instances are finished building, you can run all playbooks with the following command. The stderr/stdout of this script is appended to a file named ./install.out. The playbooks and shell script use a dynamic inventory source ```-i inventory.py``` which is just a placeholder. The dynamic inventory script simply parses the hosts.yaml file. Included is a static inventory file as well, ```ansible/static_inventory```.
 
 ```
-ansible/run_playbooks.sh
+cd ansible
+./run_playbooks.sh
 ```
 
-You can run the following playbooks by hand if you wish.
+You can run the following playbooks by hand if you wish. Order matters.
 
 Ansible playbooks:
 ==================
 
-These playbooks use an ansible.cfg file (bypass known_hosts conflicts and host key checking--use appropriately):
+These playbooks use an ```ansible.cfg``` override file (which bypasses known_hosts conflicts and host key checking--use appropriately):
 
-Test whether you can reach the hosts:
--------------------------------------
+###Test whether you can reach the hosts:
+
 ```
 ansible all -i inventory.py -m ping
 ```
 
-Add DNS to the cluster (if you choose a different IP range for your hosts, be sure to include the correct zones for DNS usage):
-------------------
+###Add DNS to the cluster
+
+NOTE: if you choose a different IP range for your hosts, be sure to include the correct zones for DNS usage. Created with Ansible templates in the roles/bind9 folder.
 ```
 ansible-playbook provision_core_servers.yaml -i inventory.py
 ```
 
-Update nodes to use DNS server:
------------------
+###Update nodes to use DNS server:
+
 ```
 ansible-playbook update_resolv.yaml -i inventory.py
 ```
 
-Add ssh key for root:
---------------
+###Add ssh key for root:
+
+This playbook adds predefined testing SSH keys for the root user across the kmas/kmin hosts for passwordless SSH. A sudoers.d/root file is created.
 ```
 ansible-playbook add_user_for_kubernetes.yaml -i inventory.py
 ```
 
-Deploy Docker:
---------------
+###Deploy Docker Engine:
+
+Follows the standard Docker Docs installation method for Ubuntu.
 ```
 ansible-playbook provision_docker_servers.yaml -i inventory.py
 ```
 
-Deploy Docker registry:
------------------------
-NOTE: Trusty 64 - This starts an upstart script which calls ```./docker-compose up``` in the ```/docker-registry``` folder
+###Deploy Docker registry:
+
+NOTE: Trusty 64 - This starts an upstart script which calls ```./docker-compose up``` in the ```/docker-registry``` folder.
+A self signed SSL cert is created and shared in the next playbook.
 ```
 ansible-playbook provision_docker_registry_servers.yaml -i inventory.py
 ```
 
-Copy Docker Registry cert from kubernetes master to docker engines:
--------------------
+###Copy Docker Registry cert from kubernetes master to docker engines:
+
 ```
 ansible-playbook delegate_copy_ssl_cert.yaml -i inventory.py -vv
 ```
 
-Build Kubernetes cluster for ubuntu:
-----------------------------
+###Build Kubernetes cluster for ubuntu:
+
 NOTE: While reading the github issues, apparently this install method uses Trusty64 upstart services not compatible with Xenial64. See the manual Docker based install method for Xenial64
 ```
 ansible-playbook provision_kubernetes.yml -i inventory.py
 ```
 
-Docker build Node.js test app deployment:
-------------------------
+###Docker build Node.js test app deployment:
+
 This creates a customizable dynamic Dockerfile build folder structure based on Ansible templates. The build folder is located at ```/tmp/hello-node```.
 TODO: Create an Ingress Controller for Kubernetes.
 ```
 ansible-playbook docker_build_app.yml -i inventory.py
 ```
 
-Install Monitoring and Heapster:
------------------
+###Install Monitoring (InfluxDB and Grafana) and Heapster:
+
 This playbook install the InfluxDB, Grafana, Heapster docker image into the kubernetes cluster.
 ```
 ansible-playbook provision_kubernetes_heapster.yml -i inventory.py
@@ -97,12 +110,11 @@ ansible-playbook provision_kubernetes_heapster.yml -i inventory.py
 Infrastructure Details
 =======================
 
-Docker Private Registry Build and Registry Login
----------------------
+###Docker Private Registry Build and Registry Login
+
 The Private Registry by default is installed on the kubernetes master (kmas1.lan). It's a docker-compose build behind an upstart script ```/etc/init.d/docker-registry```. There is an nginx proxy in front of the docker registry v2 image.
 
-Htpasswd
---------
+###Htpasswd
 
 There are 2 test users defined, so sign in with the credentials defined in vars/makevault.yml. This should be converted to an ansible-vault, but for testing purposes, it's left open.
 
@@ -123,17 +135,15 @@ Kill the container:
 docker kill kmas1.lan/hello-node:v1 
 ```
 
-Building and exposing Kubernetes pods
------------------------
+###Building and exposing Kubernetes pods
+
 
 Install go via this link:
 ```
 http://www.hostingadvice.com/how-to/install-golang-on-ubuntu/
 
 ```
-Create a django redis pod
---------------------------
-
+###Create a django redis pod
 
 Create the file ```django-redis-pod.yaml```
 ```
@@ -174,8 +184,8 @@ Ubuntu Xenial 64
 Manual Docker based Ubuntu Xenial64 Installation:
 ---------------------
 
-Service files when using xenial64 docker:
---------------
+###Service files when using xenial64 docker:
+
 ```
 cat /etc/systemd/system/docker.service
 cat /etc/systemd/system/docker.socket
@@ -267,8 +277,8 @@ Check Docker processes:
 docker ps
 ```
 
-Download kubectl:
------------------
+###Download kubectl:
+
 ```
 sudo curl -sSL "http://storage.googleapis.com/kubernetes-release/release/v1.2.0/bin/linux/amd64/kubectl" > /usr/bin/kubectl
 ls /usr/bin
