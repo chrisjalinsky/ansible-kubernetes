@@ -152,6 +152,38 @@ cd /opt/kubernetes/examples/https-nginx/
 
 ```
 
+Using the Docker Registry
+==================
+
+Here's a simple use case:
+
+```
+sudo docker login https://kmas1.lan
+```
+
+There are 2 test users defined, so sign in with the credentials defined in vars/makevault.yml. This should be converted to an ansible-vault, but for testing purposes, it's left open.
+
+At the login prompt:
+
+```
+username: testuser
+password: pass
+email: me@example.com
+```
+
+Once logged in, use the registry (if correctly configured, root user can run docker commands below, so no sudo is necessary):
+
+```
+docker pull ubuntu
+
+docker tag ubuntu kmas1.lan/ubuntu
+
+docker push kmas1.lan/ubuntu
+
+docker pull kmas1.lan/ubuntu
+
+```
+
 
 Docker Registry Systemd Xenial 64 (not applicable to trusty64):
 ===============================================================
@@ -183,10 +215,14 @@ docker login https://kmas1.lan
 
 ##################################################
 
-REGISTRY
+Ubuntu Xenial 64
 ========
 
-Certificates and Trusty64 commands. May work for Xenial64:
+Manual Docker based Ubuntu Xenial64 Installation:
+---------------------
+
+NOTE: The Ansible role should handle the registry build correctly.
+The following steps have been adapted from Ubuntu Trusty 64. These SHOULD work for Xenial64:/
 
 To begin using the registry, several steps must be performed. Since we are using self signed SSL certificates, we must share these with our cluster nodes. Docker Registry expects these to exist in a specific location, so the steps below handle that:
 
@@ -202,57 +238,14 @@ sudo update-ca-certificates
 sudo systemctl restart docker
 
 ```
-Using the Registry
-==================
-
-Here's a simple use case:
-
-```
-sudo docker login https://kmas1.lan
-```
-
-There are 2 test users defined, so sign in with the credentials defined in vars/makevault.yml. This should be converted to an ansible-vault, but for testing purposes, it's left open.
-
-At the login prompt:
-
-```
-username: testuser
-password: pass
-email: me@example.com
-```
-
-Once logged in, use the registry (if correctly configured, kubernetes user can run docker commands below, so no sudo is necessary):
-
-```
-chown kubernetes:kubernetes /home/kubernetes/.docker/config.json # not sure why I received perm errors, but run this maybe to fix??
-docker pull ubuntu
-
-docker tag ubuntu kmas1.lan/ubuntu
-
-docker push kmas1.lan/ubuntu
-
-docker pull kmas1.lan/ubuntu
-
-```
 
 Then followed this kubernetes guide for Docker based kubernetes:
 [http://kubernetes.io/docs/getting-started-guides/docker/](http://kubernetes.io/docs/getting-started-guides/docker/)
 
-Guide Registry Steps:
-=====================
-
-Copy the new ssl cert from the registry (kmas1.lan):
-```
-sudo mkdir -p /etc/docker/certs.d/kmas1.lan
-sudo mkdir /usr/local/share/ca-certificates/kmas1.lan
-sudo scp vagrant@kmas1.lan:/etc/ssl/kmas1.lan/kmas1.lan.crt /etc/docker/certs.d/kmas1.lan/ca.crt
-sudo cp /etc/docker/certs.d/kmas1.lan/ca.crt /usr/local/share/ca-certificates/kmas1.lan/ca.crt
-sudo update-ca-certificates
-sudo systemctl restart docker
-```
 
 Login to the registry:
 ----------------------
+When I originally had created the kubernetes user, instead of modifying root
 ```
 sudo chown kubernetes:kubernetes /home/kubernetes/.docker/config.json # This is a warning, doesn't seem to affect anything
 ```
@@ -264,7 +257,7 @@ docker tag ubuntu kmas1.lan/ubuntu
 docker push kmas1.lan/ubuntu
 ```
 
-Install Kubernetes:
+Manually Install Kubernetes on Trusty 64:
 ===================
 
 Clone repo and edit config-defaults.sh to install master (example config-default.sh that works is located in roles/kubernetes/templates/working-config-default.sh):
@@ -311,9 +304,9 @@ kubectl run wordpress --image=tutum/wordpress --port=80 --hostport=81
 kubectl run wordpress2 --image=tutum/wordpress --port=80 --hostport=82
 ```
 
-===============================
-   Alternate Installations:
-===============================
+=========================================
+   Additional Alternate Installations:
+=========================================
 
 Guide specific kubernetes commands:
 Running as kubernetes user
